@@ -1,4 +1,5 @@
 import unittest
+from importlib.resources import files
 
 from openhands.sdk import AgentContext
 from openhands.sdk.agent import ACPAgent
@@ -18,6 +19,12 @@ class ContextTests(unittest.TestCase):
         procedure = next(s.content for s in context.skills if s.name == "versioned-traceability")
         self.assertTrue(procedure.strip())
         self.assertIn(procedure, text)
+        reference = (
+            files("versioned_traceability")
+            .joinpath("skills/versioned-traceability/references/requirements.md")
+            .read_text(encoding="utf-8")
+        )
+        self.assertIn(reference, text)
         self.assertEqual(len(original.skills), 1)
         self.assertEqual(len(with_traceability(context).skills), 2)
 

@@ -58,15 +58,25 @@ The adapter requires these inputs for every check:
 `repo`, `scope`, and `out` must be absolute POSIX paths in the workspace's
 filesystem. For a remote workspace, these are paths on the remote machine.
 Relative paths raise `ValueError` before a command is sent to the workspace.
-Keep the scope outside the candidate's control and choose a new output path for
-each run. The adapter always checks the current worktree, including uncommitted
-changes.
+
+The scope may be maintained in the project repository or in separate
+configuration. This adapter requires an explicit file and reads its current
+contents. For a repository-owned scope, have the caller extract the approved
+version from the pinned baseline into a task input file before implementation.
+Keep the supplied copy outside the candidate's control throughout the task.
+The portable CLI can read a baseline's root `scope.json` directly when `--scope`
+is omitted.
+
+Choose a new output path for each run. The adapter always checks the current
+worktree, including uncommitted changes.
 
 ## Attach task instructions
 
 Call `with_traceability` before creating a conversation or server worktree.
-It supplies the generic procedure. The caller must also send the actual task,
-repository, scope, baseline, and evidence location to the agent.
+It supplies the shared procedure and requirements guidance as prompt text, so
+remote agents can read them without accessing files from the caller's installation.
+The caller must also send the actual task, repository, scope, baseline, and
+evidence location to the agent.
 
 This local example assumes a configured `codex-acp` installation. Replace the
 paths and `BASE_COMMIT` with your task's inputs. An existing remote workspace can

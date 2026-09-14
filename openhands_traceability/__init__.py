@@ -10,8 +10,18 @@ def with_traceability(context=None):
     from openhands.sdk import AgentContext
     from openhands.sdk.context import Skill
 
-    loaded = Skill.load(files("versioned_traceability") / "skills/versioned-traceability/SKILL.md")
-    skill = Skill(name=loaded.name, content=loaded.content, source=loaded.source)
+    directory = files("versioned_traceability") / "skills/versioned-traceability"
+    loaded = Skill.load(directory / "SKILL.md")
+    # ACP receives prompt text, without a skill-relative file lookup. Carry the
+    # reference too, so workers need not resolve a path from the caller's install.
+    content = (
+        loaded.content
+        + "\n\nThe referenced requirements guidance is included below; no file lookup is needed.\n"
+        + '<skill-reference path="references/requirements.md">\n'
+        + (directory / "references/requirements.md").read_text(encoding="utf-8")
+        + "\n</skill-reference>"
+    )
+    skill = Skill(name=loaded.name, content=content, source=loaded.source)
     context = context or AgentContext(current_datetime=None)
     return context.model_copy(
         update={"skills": [s for s in context.skills if s.name != skill.name] + [skill]}
