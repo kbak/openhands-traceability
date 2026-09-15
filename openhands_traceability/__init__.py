@@ -29,6 +29,11 @@ def _with_skill(context, name, reference):
         + f'<skill-reference path="references/{reference}">\n'
         + (directory / "references" / reference).read_text(encoding="utf-8")
         + "\n</skill-reference>"
+        + '\n\n<skill-reference path="skills/versioned-traceability/references/semantics.md">\n'
+        + files("versioned_traceability")
+        .joinpath("skills/versioned-traceability/references/semantics.md")
+        .read_text(encoding="utf-8")
+        + "\n</skill-reference>"
     )
     skill = Skill(name=loaded.name, content=content, source=loaded.source)
     context = context or AgentContext(current_datetime=None)

@@ -18,6 +18,11 @@ check after implementation, and returns failures to the agent for repair. It
 uses the check result and its existing review process to decide when the task is
 complete.
 
+Development and recovery contexts include the portable
+[semantic contract](https://github.com/kbak/versioned-traceability/blob/main/versioned_traceability/skills/versioned-traceability/references/semantics.md)
+alongside their procedural guidance. Agents receive the definitions and evidence
+limits directly, including through ACP, without resolving Markdown links.
+
 ## Install
 
 In your application's Python 3.12+ environment, install

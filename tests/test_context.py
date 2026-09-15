@@ -25,6 +25,12 @@ class ContextTests(unittest.TestCase):
             .read_text(encoding="utf-8")
         )
         self.assertIn(reference, text)
+        semantics = (
+            files("versioned_traceability")
+            .joinpath("skills/versioned-traceability/references/semantics.md")
+            .read_text(encoding="utf-8")
+        )
+        self.assertEqual(text.count(semantics), 1)
         self.assertEqual(len(original.skills), 1)
         self.assertEqual(len(with_traceability(context).skills), 2)
 
@@ -45,6 +51,12 @@ class ContextTests(unittest.TestCase):
                 files("versioned_traceability") / "skills/recover-baseline/references/recovery.md"
             ).read_text(encoding="utf-8")
             self.assertIn(reference, prompt)
+            semantics = (
+                files("versioned_traceability")
+                .joinpath("skills/versioned-traceability/references/semantics.md")
+                .read_text(encoding="utf-8")
+            )
+            self.assertEqual(prompt.count(semantics), 1)
         self.assertEqual(len(original.skills), 1)
 
 
