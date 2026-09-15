@@ -7,18 +7,27 @@ from pathlib import PurePosixPath
 
 def with_traceability(context=None):
     """Attach before conversation/worktree creation, including continuation sessions."""
+    return _with_skill(context, "versioned-traceability", "requirements.md")
+
+
+def with_recovery(context=None):
+    """Attach the baseline recovery procedure; this does not approve recovered intent."""
+    return _with_skill(context, "recover-baseline", "recovery.md")
+
+
+def _with_skill(context, name, reference):
     from openhands.sdk import AgentContext
     from openhands.sdk.context import Skill
 
-    directory = files("versioned_traceability") / "skills/versioned-traceability"
+    directory = files("versioned_traceability") / "skills" / name
     loaded = Skill.load(directory / "SKILL.md")
     # ACP receives prompt text, without a skill-relative file lookup. Carry the
     # reference too, so workers need not resolve a path from the caller's install.
     content = (
         loaded.content
-        + "\n\nThe referenced requirements guidance is included below; no file lookup is needed.\n"
-        + '<skill-reference path="references/requirements.md">\n'
-        + (directory / "references/requirements.md").read_text(encoding="utf-8")
+        + "\n\nThe referenced guidance is included below; no file lookup is needed.\n"
+        + f'<skill-reference path="references/{reference}">\n'
+        + (directory / "references" / reference).read_text(encoding="utf-8")
         + "\n</skill-reference>"
     )
     skill = Skill(name=loaded.name, content=content, source=loaded.source)
@@ -59,3 +68,68 @@ def check(workspace, *, repo, scope, base, out, env=None, timeout=5600):
     ]
     prefix = ["env", *[f"{key}={value}" for key, value in (env or {}).items()]]
     return workspace.execute_command(shlex.join(prefix + command), cwd=str(repo), timeout=timeout)
+
+
+def prepare_recovery(
+    workspace,
+    *,
+    repo,
+    out=None,
+    candidate="HEAD",
+    inputs=None,
+    isolated=False,
+    env=None,
+    timeout=600,
+):
+    """Preserve source and prepare recovery in a clean checkout, or an isolated draft."""
+    paths = {"repo": repo}
+    if out is not None:
+        paths["out"] = out
+    return _recovery_command(
+        workspace,
+        "recover",
+        paths,
+        [
+            *(["--isolated"] if isolated else []),
+            "--candidate",
+            candidate,
+            *[arg for p in (inputs or []) for arg in ("--input", p)],
+        ],
+        cwd=repo,
+        env=env,
+        timeout=timeout,
+    )
+
+
+def check_recovery(
+    workspace, *, recovery=None, repo=None, out=None, scope=None, env=None, timeout=5600
+):
+    """Validate the current draft. Exit 4 preserves required baseline review."""
+    if (recovery is None) == (repo is None):
+        raise ValueError("Supply either recovery or repo")
+    paths = {"recovery": recovery} if recovery is not None else {"repo": repo}
+    if out is not None:
+        paths["out"] = out
+    if scope is not None:
+        paths["scope"] = scope
+    return _recovery_command(
+        workspace,
+        "recover-check",
+        paths,
+        [],
+        cwd=recovery if recovery is not None else repo,
+        env=env,
+        timeout=timeout,
+    )
+
+
+def _recovery_command(workspace, action, paths, extra, *, cwd, env, timeout):
+    for name, path in paths.items():
+        if not PurePosixPath(str(path)).is_absolute():
+            raise ValueError(f"{name} must be an absolute path in the workspace filesystem")
+    command = ["python", "-m", "versioned_traceability", action]
+    for name, path in paths.items():
+        command.extend([f"--{name}", str(path)])
+    command.extend(str(value) for value in extra)
+    prefix = ["env", *[f"{key}={value}" for key, value in (env or {}).items()]]
+    return workspace.execute_command(shlex.join(prefix + command), cwd=str(cwd), timeout=timeout)

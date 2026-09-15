@@ -6,7 +6,7 @@ Add requirement tracing and test checks to OpenHands tasks using
 links, compares changes against a Git baseline, runs tests, and records the
 source contents checked.
 
-This package provides two functions:
+For normal development this package provides two functions:
 
 | Function | Purpose |
 | --- | --- |
@@ -170,3 +170,65 @@ python tests/check_acp_context.py
 ```
 
 These tests do not measure model behavior or review quality.
+
+## Recover a baseline before development
+
+The recovery adapter uses the portable tool's retained original snapshots and
+OFT reverse-specification guidance. Clean checkouts use in-place recovery by
+default; isolated drafting is optional. It adds three functions:
+
+| Function | Purpose |
+| --- | --- |
+| `prepare_recovery(workspace, repo=..., out=None, candidate="HEAD", inputs=None, isolated=False)` | Preserve original source and prepare recovery in the checkout; optionally create an isolated draft. No model or tests run. |
+| `with_recovery(context=None)` | Include the full recovery procedure and citation contract in agent context. |
+| `check_recovery(workspace, repo=..., out=None, scope=None)` | Find the active in-place recovery, validate the proposal and citations, then run OFT and tests. Supply `recovery=...` instead of `repo=...` for an explicit bundle. |
+
+All filesystem arguments are absolute POSIX paths on the execution workspace.
+`inputs` are repository-relative paths. With no explicit scope, validation uses
+the proposed scope.json in the recorded workspace. Provision the portable
+tool, OFT, and project test dependencies on that workspace as for normal checks.
+Omitting output paths selects tool-managed storage; explicit paths must be new.
+Original snapshots and logs stay outside tracked project files. In-place source
+and claims records under `.traceability/recovery/` travel with the proposed
+baseline. In-place preparation requires a clean checkout and preserves the branch
+and HEAD; an isolated draft can capture existing work with candidate="worktree".
+
+The runnable [local recovery example](examples/recover_local.py) uses your
+existing Codex ACP installation and login:
+
+```sh
+python examples/recover_local.py --repo /path/to/project \
+  --focus "Session expiration behavior" \
+  --input README.md --input src --input tests
+```
+
+It prepares the bundle, runs a recovery conversation, then has the caller invoke
+the deterministic check. By default the agent edits the checkout for normal Git
+review, with the original snapshot and results retained in the portable tool's
+Git metadata storage. Use --out for an explicit external location. Add --isolated
+to keep the original checkout unchanged; its default storage is temporary. This example
+does run an agent and may consume your normal model/subscription allowance.
+It leaves edits uncommitted and review pending. It does not install tools, change
+CI, publish, or accept the proposed baseline.
+
+The shared recovery instructions allow selected Markdown documents to be reorganized,
+rewritten, consolidated or moved while preserving the original snapshot. Agents record
+cited explanations and mappings for changed or removed requirement IDs; the portable
+checker retains documentation-review.json. Code logic and test assertions remain
+protected; coverage comments can be retargeted as requirements move or split.
+
+The result is always a proposal. Exit 4 leaves review pending even if OFT and
+tests pass; source citations establish provenance, not truth or approval. Review
+the scope, inferred promises, changes in meaning, ID mappings, links, contradictions
+and test evidence. Preserve
+the recovery bundle and acceptance decision when adopting it, then run normal
+`vt check` on the actual committed baseline. See the portable
+[recovery guide](https://github.com/kbak/versioned-traceability/blob/main/docs/recovery.md).
+
+Callers own scope selection, baseline acceptance, and the transition into normal
+development. The adapter supplies shared instructions and forwards preparation
+and validation commands; callers apply their existing review and completion policy.
+
+To probe native recovery-context delivery without a live model, run
+`python tests/check_acp_context.py --recovery` in a disposable container as
+described in the test instructions above.

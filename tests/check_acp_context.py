@@ -1,5 +1,6 @@
 """Run only in a disposable Codex/ACP container; uses a local scripted provider."""
 
+import argparse
 import http.server
 import json
 import os
@@ -12,11 +13,11 @@ from openhands.sdk.agent import ACPAgent
 from openhands.sdk.conversation import get_agent_final_response
 from openhands.sdk.workspace import LocalWorkspace
 
-from openhands_traceability import with_traceability
+from openhands_traceability import with_recovery, with_traceability
 
 
-def main():
-    context = with_traceability()
+def main(recovery=False):
+    context = with_recovery() if recovery else with_traceability()
     procedure = context.skills[0].content
     observations = []
 
@@ -139,4 +140,6 @@ requires_openai_auth = false
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--recovery", action="store_true", help="Probe baseline recovery context")
+    main(parser.parse_args().recovery)
