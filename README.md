@@ -237,3 +237,17 @@ and validation commands; callers apply their existing review and completion poli
 To probe native recovery-context delivery without a live model, run
 `python tests/check_acp_context.py --recovery` in a disposable container as
 described in the test instructions above.
+
+### Recovery feedback
+
+The shared recovery skill uses a bounded extraction pass and a short omissions
+pass, recording deferred work in Markdown rather than requiring an exhaustive
+catalog. `check_recovery(..., preflight=True)` forwards `--preflight` to check
+proposal edits, citations and tracing without running tests. Exit 5 means the
+preflight was otherwise clean but validation is incomplete; it is never a passing
+development check. Full checks retain their existing exit codes.
+
+Read the generated `recovery-review.md` first. It distinguishes proposal checks
+from trace/test results and links the detailed evidence. The local example uses
+durable Git storage by default in both recovery modes. Retain the complete source
+bundle and check outputs for transfer; Git metadata is not pushed with a branch.

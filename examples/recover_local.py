@@ -5,13 +5,13 @@ Use --isolated to draft separately. Neither mode accepts or commits a baseline.
 """
 
 import argparse
-import tempfile
 from pathlib import Path
+from uuid import uuid4
 
 from openhands.sdk import Conversation
 from openhands.sdk.agent import ACPAgent
 from openhands.sdk.workspace import LocalWorkspace
-from versioned_traceability.recovery import active_recovery
+from versioned_traceability.recovery import active_recovery, recovery_storage
 
 from openhands_traceability import check_recovery, prepare_recovery, with_recovery
 
@@ -22,7 +22,7 @@ def main():
     parser.add_argument(
         "--out",
         type=Path,
-        help="New parent directory for recovery/results (default: Git storage in-place, temporary storage when isolated)",
+        help="New parent directory for recovery/results (default: Git storage in either mode)",
     )
     parser.add_argument("--focus", required=True, help="Feature or subsystem to recover")
     parser.add_argument("--candidate", default="HEAD")
@@ -31,9 +31,9 @@ def main():
     args = parser.parse_args()
     repo = args.repo.resolve(strict=True)
     out = args.out.resolve() if args.out else None
-    if out is None and args.isolated:
-        out = Path(tempfile.mkdtemp(prefix="traceability-experiment-")) / "experiment"
     bundle = result_dir = None
+    if out is None and args.isolated:
+        bundle = recovery_storage(repo) / "runs" / uuid4().hex
     if out is not None:
         if out.is_relative_to(repo):
             parser.error("--out must be outside the source repository")
@@ -69,7 +69,8 @@ def main():
             "Follow the shared skill's documentation-editing and review rules. "
             "Preserve implementation behavior and test assertions. Record contradictions and missing "
             "evidence. This authorizes a complete draft recovery pass, not baseline acceptance. "
-            "The caller will run recover-check after your turn. Preserve the original source snapshot. "
+            "Use recover-check --preflight for feedback; the caller will run the full check after your turn. "
+            "Preserve the original source snapshot. "
             "Leave the proposal uncommitted and pending review; do not publish it or manufacture approval."
         )
         conversation.run()

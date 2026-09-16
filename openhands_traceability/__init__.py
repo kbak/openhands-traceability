@@ -107,9 +107,17 @@ def prepare_recovery(
 
 
 def check_recovery(
-    workspace, *, recovery=None, repo=None, out=None, scope=None, env=None, timeout=5600
+    workspace,
+    *,
+    recovery=None,
+    repo=None,
+    out=None,
+    scope=None,
+    preflight=False,
+    env=None,
+    timeout=5600,
 ):
-    """Validate the current draft. Exit 4 preserves required baseline review."""
+    """Validate the draft. Exit 4 requires review; preflight exit 5 leaves tests unrun."""
     if (recovery is None) == (repo is None):
         raise ValueError("Supply either recovery or repo")
     paths = {"recovery": recovery} if recovery is not None else {"repo": repo}
@@ -121,7 +129,7 @@ def check_recovery(
         workspace,
         "recover-check",
         paths,
-        [],
+        ["--preflight"] if preflight else [],
         cwd=recovery if recovery is not None else repo,
         env=env,
         timeout=timeout,

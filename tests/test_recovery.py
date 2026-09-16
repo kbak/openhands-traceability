@@ -48,7 +48,7 @@ class RecoveryAdapterTests(unittest.TestCase):
         )
 
     def test_check_preserves_pending_review_and_errors(self):
-        for code in (1, 2, 3, 4):
+        for code in (1, 2, 3, 4, 5):
             with self.subTest(exit_code=code):
                 workspace = Mock()
                 expected = SimpleNamespace(exit_code=code, stdout="result", stderr="diagnostic")
@@ -120,6 +120,12 @@ class RecoveryAdapterTests(unittest.TestCase):
             ):
                 check_recovery(workspace, **targets)
         workspace.execute_command.assert_not_called()
+
+    def test_preflight_is_forwarded_without_changing_default_checks(self):
+        workspace = Mock()
+        check_recovery(workspace, repo="/project", preflight=True)
+        args, _ = workspace.execute_command.call_args
+        self.assertEqual(shlex.split(args[0])[-1], "--preflight")
 
     def test_relative_remote_paths_fail_before_dispatch(self):
         workspace = Mock()

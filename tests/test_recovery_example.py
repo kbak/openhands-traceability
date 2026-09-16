@@ -19,8 +19,11 @@ class RecoveryExampleTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("recovery_example", EXAMPLE)
         example = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(example)
-        for explicit in (False, True):
-            with self.subTest(explicit=explicit), tempfile.TemporaryDirectory() as temporary:
+        for explicit, isolated in ((False, False), (True, False), (False, True), (True, True)):
+            with (
+                self.subTest(explicit=explicit, isolated=isolated),
+                tempfile.TemporaryDirectory() as temporary,
+            ):
                 root = Path(temporary)
                 repo = root / "project"
                 repo.mkdir()
@@ -30,6 +33,8 @@ class RecoveryExampleTests(unittest.TestCase):
                 out = root / "experiment"
                 if explicit:
                     argv += ["--out", str(out)]
+                if isolated:
+                    argv += ["--isolated"]
                 conversation = Mock()
                 conversation.state.execution_status.value = "finished"
                 with (
@@ -41,14 +46,26 @@ class RecoveryExampleTests(unittest.TestCase):
                     # The stub authors nothing. A real failed check must still
                     # retain its result and original source in the right place.
                     self.assertEqual(example.main(), 2)
-                bundle = active_recovery(repo)
+                bundle = (
+                    (
+                        out / "recovery"
+                        if explicit
+                        else next((recovery_storage(repo) / "runs").glob("*/recovery.json")).parent
+                    )
+                    if isolated
+                    else active_recovery(repo)
+                )
                 if explicit:
                     self.assertEqual(bundle, out / "recovery")
                     result = out / "result/recovery-result.json"
                 else:
                     self.assertTrue(bundle.is_relative_to(recovery_storage(repo) / "runs"))
-                    results = list(
-                        (recovery_storage(repo) / "checks").glob("*/recovery-result.json")
+                    results = (
+                        list(bundle.parent.glob(f"{bundle.name}-check-*/recovery-result.json"))
+                        if isolated
+                        else list(
+                            (recovery_storage(repo) / "checks").glob("*/recovery-result.json")
+                        )
                     )
                     self.assertEqual(len(results), 1)
                     result = results[0]
@@ -56,5 +73,7 @@ class RecoveryExampleTests(unittest.TestCase):
                     (bundle / "source/README.md").read_text(), "Existing project documentation.\n"
                 )
                 self.assertEqual(read_json(result)["status"], "error")
-                self.assertEqual(read_json(result)["workspace"], str(repo))
+                self.assertEqual(
+                    read_json(result)["workspace"], str(bundle / "draft" if isolated else repo)
+                )
                 conversation.close.assert_called_once()
