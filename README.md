@@ -10,7 +10,7 @@ For normal development this package provides two functions:
 
 | Function | Purpose |
 | --- | --- |
-| `with_traceability(context=None)` | Add instructions for maintaining requirements, references, and tests to an agent's context. |
+| `with_traceability(context=None, *, provisioned=False)` | Add instructions for maintaining requirements, references, and tests to an agent's context. |
 | `check(workspace, ...)` | Run the checker in a local or remote workspace and return its exit code and output. |
 
 Your application attaches the instructions before the task starts, runs the
@@ -82,6 +82,12 @@ It supplies the shared procedure and requirements guidance as prompt text, so
 remote agents can read them without accessing files from the caller's installation.
 The caller must also send the actual task, repository, scope, baseline, and
 evidence location to the agent.
+
+Use `with_traceability(context, provisioned=True)` when the caller has already
+provisioned the checker runtime. This omits standalone installation instructions;
+the complete development procedure, requirements guidance and semantic contract
+still cross the ACP boundary inline. The default includes setup guidance for
+callers that have not provisioned tooling. Recovery context is unchanged.
 
 Include relevant requirement IDs and any existing task context in that message.
 When saved check evidence is available, the caller or agent can use

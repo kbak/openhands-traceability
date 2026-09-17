@@ -5,17 +5,24 @@ from importlib.resources import files
 from pathlib import PurePosixPath
 
 
-def with_traceability(context=None):
-    """Attach before conversation/worktree creation, including continuation sessions."""
-    return _with_skill(context, "versioned-traceability", "requirements.md")
+def with_traceability(context=None, *, provisioned=False):
+    """Attach before conversation/worktree creation, including continuation sessions.
+
+    provisioned omits standalone installation guidance when the caller supplies
+    the checker runtime. Development, authoring and semantics remain inline.
+    """
+    references = ["requirements.md"]
+    if not provisioned:
+        references.append("setup.md")
+    return _with_skill(context, "versioned-traceability", references)
 
 
 def with_recovery(context=None):
     """Attach the baseline recovery procedure; this does not approve recovered intent."""
-    return _with_skill(context, "recover-baseline", "recovery.md")
+    return _with_skill(context, "recover-baseline", ["recovery.md"])
 
 
-def _with_skill(context, name, reference):
+def _with_skill(context, name, references):
     from openhands.sdk import AgentContext
     from openhands.sdk.context import Skill
 
@@ -26,9 +33,12 @@ def _with_skill(context, name, reference):
     content = (
         loaded.content
         + "\n\nThe referenced guidance is included below; no file lookup is needed.\n"
-        + f'<skill-reference path="references/{reference}">\n'
-        + (directory / "references" / reference).read_text(encoding="utf-8")
-        + "\n</skill-reference>"
+        + "\n\n".join(
+            f'<skill-reference path="references/{reference}">\n'
+            + (directory / "references" / reference).read_text(encoding="utf-8")
+            + "\n</skill-reference>"
+            for reference in references
+        )
         + '\n\n<skill-reference path="skills/versioned-traceability/references/semantics.md">\n'
         + files("versioned_traceability")
         .joinpath("skills/versioned-traceability/references/semantics.md")
