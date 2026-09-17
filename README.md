@@ -83,6 +83,13 @@ remote agents can read them without accessing files from the caller's installati
 The caller must also send the actual task, repository, scope, baseline, and
 evidence location to the agent.
 
+Include relevant requirement IDs and any existing task context in that message.
+When saved check evidence is available, the caller or agent can use
+`vt explain ID [ID ...] --compact --evidence /path/to/evidence.json` in the
+workspace to assemble missing context with one graph load. The portable skill
+guides selective source reads and review of related unchanged behavior. The caller
+still selects relevant IDs; the adapter does not infer the task's impact scope.
+
 This local example assumes a configured `codex-acp` installation. Replace the
 paths and `BASE_COMMIT` with your task's inputs. An existing remote workspace can
 be passed in place of `LocalWorkspace`.
@@ -142,8 +149,15 @@ result = check(
 seconds (default 5600).
 
 Preserve `result.exit_code` and the full output directory using the workspace's
-file transport. Read stdout/stderr and the retained trace/test logs when a check
-fails. An earlier passing bundle cannot replace a failed invocation.
+file transport. The portable check prints status, counts, review state, exact
+artifact paths and bounded failure excerpts. Send that feedback to a repair
+session, opening full logs/reports when needed; no adapter-specific report parser
+is required. An earlier passing bundle cannot replace a failed invocation.
+
+The shared skill asks agents to review the full candidate diff and related
+behavior, then review repair deltas and affected links without routinely repeating
+completed reads. The configured test command runs within each check. A caller's
+independent completion check and existing review gates still apply.
 
 | Exit | Handling |
 | --- | --- |
