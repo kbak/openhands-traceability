@@ -188,6 +188,11 @@ It guides the agent to turn selected requirements into assertions over generated
 inputs, using the project's test library and runner. No additional agent service
 is required.
 
+The instructions also cover optional [logical statements](https://github.com/kbak/versioned-traceability/blob/main/docs/property-testing.md#optional-logical-statements):
+domain, assumptions, and a precise property beside its prose and existing ID.
+They distinguish the requirement from test-search limits and do not treat a
+written formula as proof.
+
 For a dedicated testing task, use
 `with_property_testing(context, framework="hypothesis")` instead of
 `with_traceability`. The `framework` choices are `hypothesis`, `fast-check`,
