@@ -12,6 +12,9 @@ jobs:
   package-and-tests:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    strategy:
+      matrix:
+        sdk: ['1.48.0', '1.49.1']
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       VT_OFT_JAR: ${{ github.workspace }}/.tools/openfasttrace-4.9.0.jar
@@ -39,7 +42,7 @@ jobs:
           python -m pip install build ruff==0.11.13
           python -m build core --outdir "$RUNNER_TEMP/dist"
           python -m build adapter --outdir "$RUNNER_TEMP/dist"
-          python -m pip install "$RUNNER_TEMP"/dist/*.whl 'pytest>=8,<10'
+          python -m pip install "$RUNNER_TEMP"/dist/*.whl 'pytest>=8,<10' 'openhands-sdk==${{ matrix.sdk }}'
           vt install-oft --destination "$GITHUB_WORKSPACE/.tools"
           mkdir "$RUNNER_TEMP/adapter-source"
           tar -xzf "$RUNNER_TEMP"/dist/openhands_traceability-*.tar.gz --strip-components=1 -C "$RUNNER_TEMP/adapter-source"
@@ -56,7 +59,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: adapter-package-and-tests
+          name: adapter-package-and-tests-sdk-${{ matrix.sdk }}
           path: |
             ${{ runner.temp }}/dist/
             ${{ runner.temp }}/adapter-tests.xml

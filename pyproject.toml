@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openhands-traceability"
-version = "0.2.6"
+version = "0.2.7"
 description = "OpenHands context and command adapter for versioned-traceability"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["versioned-traceability==0.4.5", "openhands-sdk>=1.46,<1.49"]
+dependencies = ["versioned-traceability==0.4.5", "openhands-sdk>=1.46,<1.50"]
 
 [tool.ruff]
 target-version = "py312"
