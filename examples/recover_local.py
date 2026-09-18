@@ -66,6 +66,8 @@ def main():
             f"Read {bundle / 'recovery.json'} and {bundle / 'instructions.md'} for the mode and artifact locations. "
             "Read the retained inventory and original source; create native OFT requirements, source/test "
             "coverage comments, scope.json, and claims.json according to the recovery skill. "
+            "Include existing properties, candidate invariants, and prioritized missing checks "
+            "in the capability/claims handoff for strengthening after adoption. "
             "Follow the shared skill's documentation-editing and review rules. "
             "Preserve implementation behavior and test assertions. Record contradictions and missing "
             "evidence. This authorizes a complete draft recovery pass, not baseline acceptance. "

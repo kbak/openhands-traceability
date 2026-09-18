@@ -18,8 +18,27 @@ def with_traceability(context=None, *, provisioned=False):
 
 
 def with_recovery(context=None):
-    """Attach the baseline recovery procedure; this does not approve recovered intent."""
+    """Attach recovery and property discovery; this does not approve recovered intent."""
     return _with_skill(context, "recover-baseline", ["recovery.md"])
+
+
+def with_property_testing(context=None, *, framework=None):
+    """Attach the portable property workflow and one optional framework guide.
+
+    Normal with_traceability contexts already include the compact workflow.
+    Use this entry point for a dedicated testing task or to supply a framework
+    reference to a worker that cannot read the caller's package resources.
+    """
+    frameworks = {
+        "hypothesis": "python",
+        "fast-check": "typescript",
+        "quickcheck": "haskell",
+        "hegel": "hegel",
+    }
+    if framework is not None and framework not in frameworks:
+        raise ValueError(f"Unknown property-testing framework: {framework}")
+    references = [frameworks[framework] + ".md"] if framework else []
+    return _with_skill(context, "property-testing", references)
 
 
 def _with_skill(context, name, references):
@@ -32,7 +51,7 @@ def _with_skill(context, name, references):
     # reference too, so workers need not resolve a path from the caller's install.
     content = (
         loaded.content
-        + "\n\nThe referenced guidance is included below; no file lookup is needed.\n"
+        + "\n\nThe selected references are included below.\n"
         + "\n\n".join(
             f'<skill-reference path="references/{reference}">\n'
             + (directory / "references" / reference).read_text(encoding="utf-8")
@@ -45,6 +64,15 @@ def _with_skill(context, name, references):
         .read_text(encoding="utf-8")
         + "\n</skill-reference>"
     )
+    if name in {"versioned-traceability", "recover-baseline"}:
+        property_skill = Skill.load(
+            files("versioned_traceability") / "skills/property-testing/SKILL.md"
+        )
+        content += (
+            '\n\n<skill-reference path="skills/property-testing/SKILL.md">\n'
+            + property_skill.content
+            + "\n</skill-reference>"
+        )
     skill = Skill(name=loaded.name, content=content, source=loaded.source)
     context = context or AgentContext(current_datetime=None)
     return context.model_copy(

@@ -5,7 +5,7 @@ from openhands.sdk import AgentContext
 from openhands.sdk.agent import ACPAgent
 from openhands.sdk.context import Skill
 
-from openhands_traceability import with_recovery, with_traceability
+from openhands_traceability import with_property_testing, with_recovery, with_traceability
 
 
 class ContextTests(unittest.TestCase):
@@ -85,6 +85,45 @@ class ContextTests(unittest.TestCase):
             )
             self.assertEqual(prompt.count(semantics), 1)
         self.assertEqual(len(original.skills), 1)
+
+    def test_property_workflow_reaches_development_and_recovery_across_reinjection(self):
+        directory = files("versioned_traceability") / "skills/property-testing"
+        procedure = Skill.load(directory / "SKILL.md").content
+        for attach in (with_traceability, with_recovery):
+            with self.subTest(workflow=attach.__name__):
+                context = attach()
+                for current in (context, attach(context)):
+                    restored = ACPAgent.model_validate_json(
+                        ACPAgent(acp_command=["codex-acp"], agent_context=current).model_dump_json()
+                    )
+                    prompt = restored.agent_context.to_acp_prompt_context()
+                    self.assertEqual(prompt.count(procedure), 1)
+                    for reference in (directory / "references").iterdir():
+                        self.assertNotIn(reference.read_text(), prompt)
+
+    def test_selected_property_guide_survives_serialization_and_replacement(self):
+        directory = files("versioned_traceability") / "skills/property-testing"
+        original = AgentContext(skills=[Skill(name="task", content="Check the approved quota.")])
+        for framework, reference in (
+            ("hypothesis", "python"),
+            ("fast-check", "typescript"),
+            ("quickcheck", "haskell"),
+            ("hegel", "hegel"),
+        ):
+            with self.subTest(framework=framework):
+                context = with_property_testing(original, framework=framework)
+                context = with_property_testing(context, framework=framework)
+                restored = ACPAgent.model_validate_json(
+                    ACPAgent(acp_command=["codex-acp"], agent_context=context).model_dump_json()
+                )
+                prompt = restored.agent_context.to_acp_prompt_context()
+                self.assertIn("Check the approved quota.", prompt)
+                self.assertEqual(len(context.skills), 2)
+                for file in (directory / "references").iterdir():
+                    self.assertEqual(prompt.count(file.read_text()), int(file.stem == reference))
+        self.assertEqual(len(original.skills), 1)
+        with self.assertRaises(ValueError):
+            with_property_testing(original, framework="../setup")
 
 
 if __name__ == "__main__":

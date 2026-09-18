@@ -1,0 +1,63 @@
+name: Packaged adapter checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-and-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      VT_OFT_JAR: ${{ github.workspace }}/.tools/openfasttrace-4.9.0.jar
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: adapter
+          persist-credentials: false
+      # This exact source revision supplies the unpublished core dependency.
+      # Update together with the exact version pin in pyproject.toml.
+      - uses: actions/checkout@v7
+        with:
+          repository: kbak/versioned-traceability
+          ref: 0cf68e90b14f084dde5b87564916848ac8327912
+          path: core
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build core and adapter wheels through sdists
+        run: |
+          python -m pip install build ruff==0.11.13
+          python -m build core --outdir "$RUNNER_TEMP/dist"
+          python -m build adapter --outdir "$RUNNER_TEMP/dist"
+          python -m pip install "$RUNNER_TEMP"/dist/*.whl 'pytest>=8,<10'
+          vt install-oft --destination "$GITHUB_WORKSPACE/.tools"
+          mkdir "$RUNNER_TEMP/adapter-source"
+          tar -xzf "$RUNNER_TEMP"/dist/openhands_traceability-*.tar.gz --strip-components=1 -C "$RUNNER_TEMP/adapter-source"
+      - name: Lint
+        working-directory: adapter
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Test installed packages and serialized agent context
+        working-directory: ${{ runner.temp }}
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+        run: python -m pytest "$RUNNER_TEMP/adapter-source/tests" --junitxml="$RUNNER_TEMP/adapter-tests.xml" -q
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: adapter-package-and-tests
+          path: |
+            ${{ runner.temp }}/dist/
+            ${{ runner.temp }}/adapter-tests.xml

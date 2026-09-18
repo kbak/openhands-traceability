@@ -13,6 +13,17 @@ For normal development this package provides two functions:
 | `with_traceability(context=None, *, provisioned=False)` | Add instructions for maintaining requirements, references, and tests to an agent's context. |
 | `check(workspace, ...)` | Run the checker in a local or remote workspace and return its exit code and output. |
 
+Development and recovery contexts also include the compact portable property-testing
+workflow. Recovery uses its discovery/handoff guidance; development uses its
+authoring/maintenance guidance. Framework manuals are not all loaded. For a dedicated testing task,
+`with_property_testing(context=None, framework="hypothesis")` attaches the same
+workflow plus the selected guide. Supported choices are `hypothesis`, `fast-check`,
+`quickcheck`, and `hegel`; omitting `framework` supplies only the general workflow.
+Use this instead of `with_traceability` for a dedicated property-authoring context;
+the normal factory development context already carries the core procedure.
+Generated tests use the application's runner and test dependencies. This adapter
+does not generate inputs or run a second agent service.
+
 Your application attaches the instructions before the task starts, runs the
 check after implementation, and returns failures to the agent for repair. It
 uses the check result and its existing review process to decide when the task is
@@ -196,6 +207,13 @@ python tests/check_acp_context.py
 
 These tests do not measure model behavior or review quality.
 
+The [CI workflow](.github/workflows/ci.yml) builds both distributions, installs
+the wheels, and runs the adapter suite using the packaged tests from a separate
+working directory. It pins the core's source commit alongside its exact package
+version so the release candidate can be tested before publishing to a registry.
+That core commit must be available on GitHub before the adapter workflow runs.
+The optional live ACP/container probe is not part of this gate.
+
 ## Recover a baseline before development
 
 The recovery adapter uses the portable tool's retained original snapshots and
@@ -205,7 +223,7 @@ default; isolated drafting is optional. It adds three functions:
 | Function | Purpose |
 | --- | --- |
 | `prepare_recovery(workspace, repo=..., out=None, candidate="HEAD", inputs=None, isolated=False)` | Preserve original source and prepare recovery in the checkout; optionally create an isolated draft. No model or tests run. |
-| `with_recovery(context=None)` | Include the full recovery procedure and citation contract in agent context. |
+| `with_recovery(context=None)` | Include recovery, citation rules, and property discovery/strengthening handoff guidance in agent context. |
 | `check_recovery(workspace, repo=..., out=None, scope=None)` | Find the active in-place recovery, validate the proposal and citations, then run OFT and tests. Supply `recovery=...` instead of `repo=...` for an explicit bundle. |
 
 All filesystem arguments are absolute POSIX paths on the execution workspace.
@@ -241,6 +259,15 @@ rewritten, consolidated or moved while preserving the original snapshot. Agents 
 cited explanations and mappings for changed or removed requirement IDs; the portable
 checker retains documentation-review.json. Code logic and test assertions remain
 protected; coverage comments can be retargeted as requirements move or split.
+
+The same recovery pass identifies existing properties and candidate invariants,
+then records prioritized missing checks, linked IDs, domains, assumptions and
+unresolved intent in the existing capability/claims handoff. It adds no executable
+tests or testing dependencies. After baseline adoption, an authorized strengthening
+task uses `with_traceability` (or `with_property_testing` for a focused task) and
+the ordinary checker to add those checks. Reuse an existing authorization to
+continue; a recovery-only request stops at the handoff. Later development
+maintains affected properties through the same workflow.
 
 The result is always a proposal. Exit 4 leaves review pending even if OFT and
 tests pass; source citations establish provenance, not truth or approval. Review
