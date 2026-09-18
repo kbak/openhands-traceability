@@ -1,4 +1,4 @@
-"""Native OpenHands context plus invocation of the shared portable checker."""
+"""Attach traceability instructions to OpenHands agents and run checks in their workspace."""
 
 import shlex
 from importlib.resources import files
@@ -18,7 +18,7 @@ def with_traceability(context=None, *, provisioned=False):
 
 
 def with_recovery(context=None):
-    """Attach recovery and property discovery; this does not approve recovered intent."""
+    """Attach instructions for documenting existing requirements, links, and missing tests."""
     return _with_skill(context, "recover-baseline", ["recovery.md"])
 
 
@@ -124,7 +124,7 @@ def prepare_recovery(
     env=None,
     timeout=600,
 ):
-    """Preserve source and prepare recovery in a clean checkout, or an isolated draft."""
+    """Save original source and prepare records for a documentation proposal."""
     paths = {"repo": repo}
     if out is not None:
         paths["out"] = out

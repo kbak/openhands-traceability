@@ -6,39 +6,25 @@ Add requirement tracing and test checks to OpenHands tasks using
 links, compares changes against a Git baseline, runs tests, and records the
 source contents checked.
 
-For normal development this package provides two functions:
+Your application gives the agent instructions, runs a check after the task, and
+uses the result in its existing repair and review process. This adapter provides
+the instructions and forwards commands to the workspace; it does not manage the
+agent's lifecycle or approve changes.
 
 | Function | Purpose |
 | --- | --- |
-| `with_traceability(context=None, *, provisioned=False)` | Add instructions for maintaining requirements, references, and tests to an agent's context. |
+| `with_traceability(context=None, *, provisioned=False)` | Add instructions for maintaining requirements, code/test links, and tests to agent context. |
 | `check(workspace, ...)` | Run the checker in a local or remote workspace and return its exit code and output. |
+| `with_property_testing(context=None, framework=None)` | Add instructions for a focused property-testing task, with an optional library guide. |
 
-Development and recovery contexts also include the compact portable property-testing
-workflow. Recovery uses its discovery/handoff guidance; development uses its
-authoring/maintenance guidance. Framework manuals are not all loaded. For a dedicated testing task,
-`with_property_testing(context=None, framework="hypothesis")` attaches the same
-workflow plus the selected guide. Supported choices are `hypothesis`, `fast-check`,
-`quickcheck`, and `hegel`; omitting `framework` supplies only the general workflow.
-Use this instead of `with_traceability` for a dedicated property-authoring context;
-the normal factory development context already carries the core procedure.
-Generated tests use the application's runner and test dependencies. This adapter
-does not generate inputs or run a second agent service.
-
-Your application attaches the instructions before the task starts, runs the
-check after implementation, and returns failures to the agent for repair. It
-uses the check result and its existing review process to decide when the task is
-complete.
-
-Development and recovery contexts include the portable
-[semantic contract](https://github.com/kbak/versioned-traceability/blob/main/versioned_traceability/skills/versioned-traceability/references/semantics.md)
-alongside their procedural guidance. Agents receive the definitions and evidence
-limits directly, including through ACP, without resolving Markdown links.
+For projects that need starting requirements and links, see
+[document an existing project](#document-an-existing-project).
 
 ## Install
 
 In your application's Python 3.12+ environment, install
 [Versioned Traceability](https://github.com/kbak/versioned-traceability#install),
-then install this package from its checkout:
+then install this adapter from its checkout:
 
 ```sh
 python -m pip install .
@@ -62,6 +48,10 @@ the remote machine.
 
 Set up requirements, references, and a scope file using the
 [Versioned Traceability guide](https://github.com/kbak/versioned-traceability#check-a-change).
+A **baseline** is the starting Git commit; the **candidate** is the source being
+checked. The **scope** selects what to trace and how to run tests. **Evidence** is
+the saved result, logs, and source identity.
+
 The adapter requires these inputs for every check:
 
 | Input | Meaning |
@@ -77,9 +67,8 @@ Relative paths raise `ValueError` before a command is sent to the workspace.
 
 The scope may be maintained in the project repository or in separate
 configuration. This adapter requires an explicit file and reads its current
-contents. For a repository-owned scope, have the caller extract the approved
-version from the pinned baseline into a task input file before implementation.
-Keep the supplied copy outside the candidate's control throughout the task.
+contents. For a scope kept in the repository, extract the reviewed version from
+the fixed baseline into a task input file before implementation. Keep the supplied copy outside the candidate's control throughout the task.
 The portable CLI can read a baseline's root `scope.json` directly when `--scope`
 is omitted.
 
@@ -96,9 +85,10 @@ evidence location to the agent.
 
 Use `with_traceability(context, provisioned=True)` when the caller has already
 provisioned the checker runtime. This omits standalone installation instructions;
-the complete development procedure, requirements guidance and semantic contract
-still cross the ACP boundary inline. The default includes setup guidance for
-callers that have not provisioned tooling. Recovery context is unchanged.
+the development procedure, requirements guidance, and definitions of check results
+are still included in the prompt sent through ACP. The default includes setup
+guidance for callers that have not provisioned tooling. This flag applies only to
+the development instructions.
 
 Include relevant requirement IDs and any existing task context in that message.
 When saved check evidence is available, the caller or agent can use
@@ -182,12 +172,93 @@ independent completion check and existing review gates still apply.
 | 4 | Automated checks passed; specification/test changes need review. |
 | 1, 2, 3 | Check failed or could not establish successful validation. |
 
-After export, run `vt verify` against the actual commit. Add
+Once changes are committed or exported to another checkout, run `vt verify`
+against that commit using the original baseline and scope. Add
 `--allow-pending-review` for exit-4 evidence and complete review before
 accepting the change. Instructions alone do not enforce these completion checks.
 
 [examples/check_local.py](examples/check_local.py) runs the adapter with a local
 workspace and explicit repository, scope, base, and output arguments.
+
+## Add or maintain property tests
+
+Development instructions include the portable
+[property-testing workflow](https://github.com/kbak/versioned-traceability/blob/main/docs/property-testing.md).
+It guides the agent to turn selected requirements into assertions over generated
+inputs, using the project's test library and runner. No additional agent service
+is required.
+
+For a dedicated testing task, use
+`with_property_testing(context, framework="hypothesis")` instead of
+`with_traceability`. The `framework` choices are `hypothesis`, `fast-check`,
+`quickcheck`, and `hegel`. Omitting it includes only the general procedure;
+selecting one also includes that library's guide. The project supplies its own
+test dependencies.
+
+## Document an existing project
+
+Use this workflow to propose requirements and links from an existing project's
+documentation, code, and tests. The function names call this *baseline recovery*:
+reconstructing requirements from existing sources. The starting requirements
+must be reviewed before they guide later development.
+
+| Function | Purpose |
+| --- | --- |
+| `prepare_recovery(workspace, repo=..., out=None, candidate="HEAD", inputs=None, isolated=False)` | Save original source and prepare citation records. Use `isolated=True` for a separate draft. No agent or tests run. |
+| `with_recovery(context=None)` | Add instructions for documenting requirements, citing sources, linking code/tests, and identifying missing checks. |
+| `check_recovery(workspace, repo=..., out=None, scope=None)` | Check the proposal's edits and citations, then run OFT and existing tests. Supply `recovery=...` instead of `repo=...` to select a saved bundle. |
+
+All filesystem arguments are absolute POSIX paths in the execution workspace;
+`inputs` are repository-relative paths to inspect. Checks use the proposed
+`scope.json` unless an explicit scope is supplied. Install the checker, OFT, and
+project test dependencies in that workspace as for normal checks.
+
+The default starts from a clean checkout at HEAD and leaves draft edits there.
+Use `isolated=True` to work in a separate draft. That mode also permits
+`candidate="worktree"` to include existing local changes. Both modes preserve the
+original source and leave the proposal uncommitted.
+
+### Run the example with an agent
+
+The [local example](examples/recover_local.py) uses an existing Codex ACP
+installation and login:
+
+```sh
+python examples/recover_local.py --repo /path/to/project \
+  --focus "Session expiration behavior" \
+  --input README.md --input src --input tests
+```
+
+It prepares the source records, runs an agent conversation to write the proposal,
+and then calls the checker. It uses your configured model or subscription. Add
+`--isolated` for a separate draft or `--out` for a new external storage directory.
+The example expects tools to be installed and leaves the proposal for review.
+
+The agent can reorganize selected Markdown documents and add or retarget code/test
+references. It cites original sources, records changes to requirement IDs, and
+flags inferred intent and contradictions. Implementation behavior and test
+assertions are preserved. Missing property tests are recorded as recommendations;
+add them after the starting requirements are reviewed and test work is authorized.
+
+### Check and review the proposal
+
+`check_recovery(..., preflight=True)` checks edits, citations, and links without
+running tests. Exit 5 means those checks passed but tests remain unrun. A full
+check also runs the existing tests; exit 4 means automation passed and review
+remains required. Neither result approves the requirements.
+
+Start with the generated `recovery-review.md`. Review the scope, proposed
+requirements, original citations, ID changes, unresolved questions, and test
+results. Citations establish where a statement came from; the reviewer still
+assesses whether the source supports it. Once accepted, commit the reviewed
+changes and run `vt check --base HEAD --candidate HEAD` on that commit.
+See the [existing-project guide](https://github.com/kbak/versioned-traceability/blob/main/docs/recovery.md).
+
+By default, both modes retain the original source and results in tool-managed
+Git metadata. These files are local and do not travel with a push. Retain the
+complete bundle and check outputs for shared review. The in-place mode also
+creates source and claim records under `.traceability/recovery/` in the project;
+include these with the reviewed documentation.
 
 ## Tests
 
@@ -205,94 +276,11 @@ requires no model credentials:
 python tests/check_acp_context.py
 ```
 
-These tests do not measure model behavior or review quality.
+To check instruction delivery for documenting an existing project, add
+`--recovery` to the ACP probe. These tests do not measure model behavior or review
+quality.
 
 The [CI workflow](.github/workflows/ci.yml) builds both packages, installs the
 wheels, and runs the packaged adapter tests from a separate working directory.
 Keep its core source revision aligned with the dependency in `pyproject.toml`.
 The optional ACP/container probe runs separately.
-
-## Recover a baseline before development
-
-The recovery adapter uses the portable tool's retained original snapshots and
-OFT reverse-specification guidance. Clean checkouts use in-place recovery by
-default; isolated drafting is optional. It adds three functions:
-
-| Function | Purpose |
-| --- | --- |
-| `prepare_recovery(workspace, repo=..., out=None, candidate="HEAD", inputs=None, isolated=False)` | Preserve original source and prepare recovery in the checkout; optionally create an isolated draft. No model or tests run. |
-| `with_recovery(context=None)` | Include recovery, citation rules, and property discovery/strengthening handoff guidance in agent context. |
-| `check_recovery(workspace, repo=..., out=None, scope=None)` | Find the active in-place recovery, validate the proposal and citations, then run OFT and tests. Supply `recovery=...` instead of `repo=...` for an explicit bundle. |
-
-All filesystem arguments are absolute POSIX paths on the execution workspace.
-`inputs` are repository-relative paths. With no explicit scope, validation uses
-the proposed scope.json in the recorded workspace. Provision the portable
-tool, OFT, and project test dependencies on that workspace as for normal checks.
-Omitting output paths selects tool-managed storage; explicit paths must be new.
-Original snapshots and logs stay outside tracked project files. In-place source
-and claims records under `.traceability/recovery/` travel with the proposed
-baseline. In-place preparation requires a clean checkout and preserves the branch
-and HEAD; an isolated draft can capture existing work with candidate="worktree".
-
-The runnable [local recovery example](examples/recover_local.py) uses your
-existing Codex ACP installation and login:
-
-```sh
-python examples/recover_local.py --repo /path/to/project \
-  --focus "Session expiration behavior" \
-  --input README.md --input src --input tests
-```
-
-It prepares the bundle, runs a recovery conversation, then has the caller invoke
-the deterministic check. By default the agent edits the checkout for normal Git
-review, with the original snapshot and results retained in the portable tool's
-Git metadata storage. Use --out for an explicit external location. Add --isolated
-to keep the original checkout unchanged; its default storage is temporary. This example
-does run an agent and may consume your normal model/subscription allowance.
-It leaves edits uncommitted and review pending. It does not install tools, change
-CI, publish, or accept the proposed baseline.
-
-The shared recovery instructions allow selected Markdown documents to be reorganized,
-rewritten, consolidated or moved while preserving the original snapshot. Agents record
-cited explanations and mappings for changed or removed requirement IDs; the portable
-checker retains documentation-review.json. Code logic and test assertions remain
-protected; coverage comments can be retargeted as requirements move or split.
-
-The same recovery pass identifies existing properties and candidate invariants,
-then records prioritized missing checks, linked IDs, domains, assumptions and
-unresolved intent in the existing capability/claims handoff. It adds no executable
-tests or testing dependencies. After baseline adoption, an authorized strengthening
-task uses `with_traceability` (or `with_property_testing` for a focused task) and
-the ordinary checker to add those checks. Reuse an existing authorization to
-continue; a recovery-only request stops at the handoff. Later development
-maintains affected properties through the same workflow.
-
-The result is always a proposal. Exit 4 leaves review pending even if OFT and
-tests pass; source citations establish provenance, not truth or approval. Review
-the scope, inferred promises, changes in meaning, ID mappings, links, contradictions
-and test evidence. Preserve
-the recovery bundle and acceptance decision when adopting it, then run normal
-`vt check` on the actual committed baseline. See the portable
-[recovery guide](https://github.com/kbak/versioned-traceability/blob/main/docs/recovery.md).
-
-Callers own scope selection, baseline acceptance, and the transition into normal
-development. The adapter supplies shared instructions and forwards preparation
-and validation commands; callers apply their existing review and completion policy.
-
-To probe native recovery-context delivery without a live model, run
-`python tests/check_acp_context.py --recovery` in a disposable container as
-described in the test instructions above.
-
-### Recovery feedback
-
-The shared recovery skill uses a bounded extraction pass and a short omissions
-pass, recording deferred work in Markdown rather than requiring an exhaustive
-catalog. `check_recovery(..., preflight=True)` forwards `--preflight` to check
-proposal edits, citations and tracing without running tests. Exit 5 means the
-preflight was otherwise clean but validation is incomplete; it is never a passing
-development check. Full checks retain their existing exit codes.
-
-Read the generated `recovery-review.md` first. It distinguishes proposal checks
-from trace/test results and links the detailed evidence. The local example uses
-durable Git storage by default in both recovery modes. Retain the complete source
-bundle and check outputs for transfer; Git metadata is not pushed with a branch.

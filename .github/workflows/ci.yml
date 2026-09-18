@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: kbak/versioned-traceability
-          ref: c39ca566b56a5ae8a9107a8731beef8bc770aa8a
+          ref: 35cf18d5e0ff6b2a804b09ce0342199111f514cc
           path: core
           persist-credentials: false
       - uses: actions/setup-python@v7

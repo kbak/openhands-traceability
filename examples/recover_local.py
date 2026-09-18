@@ -1,6 +1,6 @@
-"""Run an OFT-guided recovery with an existing Codex ACP installation/login.
+"""Document existing requirements and links using an installed Codex ACP agent.
 
-Preserves original evidence and drafts in a clean checkout by default.
+Uses the existing ACP login. Preserves original source and drafts in a clean checkout.
 Use --isolated to draft separately. Neither mode accepts or commits a baseline.
 """
 
@@ -22,9 +22,9 @@ def main():
     parser.add_argument(
         "--out",
         type=Path,
-        help="New parent directory for recovery/results (default: Git storage in either mode)",
+        help="New directory for originals and check results (default: Git metadata in either mode)",
     )
-    parser.add_argument("--focus", required=True, help="Feature or subsystem to recover")
+    parser.add_argument("--focus", required=True, help="Feature or subsystem to document")
     parser.add_argument("--candidate", default="HEAD")
     parser.add_argument("--isolated", action="store_true")
     parser.add_argument("--input", action="append", dest="inputs")
@@ -61,23 +61,25 @@ def main():
     conversation = Conversation(agent=agent, workspace=workspace)
     try:
         conversation.send_message(
-            f"Recover a proposed traceability baseline for this scope: {args.focus}\n"
-            f"Recovery bundle: {bundle}\nWorking repository: {bundle / 'draft' if args.isolated else repo}\n"
+            f"Document the existing requirements and code/test links for this scope: {args.focus}\n"
+            f"Original source and citation records: {bundle}\nWorking repository: {bundle / 'draft' if args.isolated else repo}\n"
             f"Read {bundle / 'recovery.json'} and {bundle / 'instructions.md'} for the mode and artifact locations. "
             "Read the retained inventory and original source; create native OFT requirements, source/test "
             "coverage comments, scope.json, and claims.json according to the recovery skill. "
             "Include existing properties, candidate invariants, and prioritized missing checks "
-            "in the capability/claims handoff for strengthening after adoption. "
+            "in the feature table or claim notes for test improvements after requirements review. "
             "Follow the shared skill's documentation-editing and review rules. "
             "Preserve implementation behavior and test assertions. Record contradictions and missing "
-            "evidence. This authorizes a complete draft recovery pass, not baseline acceptance. "
+            "evidence. Prepare the complete documentation proposal and leave acceptance to review. "
             "Use recover-check --preflight for feedback; the caller will run the full check after your turn. "
             "Preserve the original source snapshot. "
             "Leave the proposal uncommitted and pending review; do not publish it or manufacture approval."
         )
         conversation.run()
         if conversation.state.execution_status.value != "finished":
-            print("Recovery agent did not finish; inspect the retained draft before checking.")
+            print(
+                "The documentation task did not finish; inspect the retained draft before checking."
+            )
             return 2
     finally:
         conversation.close()
