@@ -207,12 +207,10 @@ python tests/check_acp_context.py
 
 These tests do not measure model behavior or review quality.
 
-The [CI workflow](.github/workflows/ci.yml) builds both distributions, installs
-the wheels, and runs the adapter suite using the packaged tests from a separate
-working directory. It pins the core's source commit alongside its exact package
-version so the release candidate can be tested before publishing to a registry.
-That core commit must be available on GitHub before the adapter workflow runs.
-The optional live ACP/container probe is not part of this gate.
+The [CI workflow](.github/workflows/ci.yml) builds both packages, installs the
+wheels, and runs the packaged adapter tests from a separate working directory.
+Keep its core source revision aligned with the dependency in `pyproject.toml`.
+The optional ACP/container probe runs separately.
 
 ## Recover a baseline before development
 

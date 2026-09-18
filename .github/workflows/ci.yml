@@ -20,12 +20,11 @@ jobs:
         with:
           path: adapter
           persist-credentials: false
-      # This exact source revision supplies the unpublished core dependency.
-      # Update together with the exact version pin in pyproject.toml.
+      # Keep the core source revision aligned with its version in pyproject.toml.
       - uses: actions/checkout@v7
         with:
           repository: kbak/versioned-traceability
-          ref: 0cf68e90b14f084dde5b87564916848ac8327912
+          ref: c39ca566b56a5ae8a9107a8731beef8bc770aa8a
           path: core
           persist-credentials: false
       - uses: actions/setup-python@v7
