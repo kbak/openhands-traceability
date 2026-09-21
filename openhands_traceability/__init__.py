@@ -42,12 +42,12 @@ def with_property_testing(context=None, *, framework=None):
 
 
 def with_model_checking(context=None, *, language=None, backend="alloy"):
-    """Attach native Alloy or Z3 guidance and an optional implementation guide."""
+    """Attach native Alloy, Z3 SMT or CHC/Spacer guidance and an optional implementation guide."""
     if language not in {None, "python", "daml"}:
         raise ValueError(f"Unknown model-checking language: {language}")
-    if backend not in {"alloy", "z3"}:
+    if backend not in {"alloy", "z3", "chc"}:
         raise ValueError(f"Unknown model-checking backend: {backend}")
-    references = ["execution.md" if backend == "alloy" else "smt.md"]
+    references = [{"alloy": "execution.md", "z3": "smt.md", "chc": "chc.md"}[backend]]
     if language:
         references.append(language + ".md")
     return _with_skill(context, "model-checking", references)

@@ -50,6 +50,19 @@ class ContextTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             with_model_checking(backend="../setup")
 
+    def test_chc_guide_replaces_smt_and_survives_serialization(self):
+        directory = files("versioned_traceability") / "skills/model-checking/references"
+        context = with_model_checking(language="daml", backend="z3")
+        context = with_model_checking(context, language="daml", backend="chc")
+        restored = ACPAgent.model_validate_json(
+            ACPAgent(acp_command=["codex-acp"], agent_context=context).model_dump_json()
+        )
+        prompt = restored.agent_context.to_acp_prompt_context()
+        for name in ("chc", "daml"):
+            self.assertEqual(prompt.count((directory / (name + ".md")).read_text()), 1)
+        self.assertNotIn((directory / "smt.md").read_text(), prompt)
+        self.assertEqual(len(context.skills), 1)
+
     def test_native_serialization_preserves_existing_and_traceability_instructions(self):
         original = AgentContext(skills=[Skill(name="task", content="Implement the selected task.")])
         context = with_traceability(original)
