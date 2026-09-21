@@ -41,6 +41,16 @@ def with_property_testing(context=None, *, framework=None):
     return _with_skill(context, "property-testing", references)
 
 
+def with_model_checking(context=None, *, language=None):
+    """Attach Alloy authoring/execution guidance and an optional implementation guide."""
+    if language not in {None, "python", "daml"}:
+        raise ValueError(f"Unknown model-checking language: {language}")
+    references = ["execution.md"]
+    if language:
+        references.append(language + ".md")
+    return _with_skill(context, "model-checking", references)
+
+
 def _with_skill(context, name, references):
     from openhands.sdk import AgentContext
     from openhands.sdk.context import Skill
