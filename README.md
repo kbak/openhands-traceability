@@ -16,7 +16,7 @@ agent's lifecycle or approve changes.
 | `with_traceability(context=None, *, provisioned=False)` | Add instructions for maintaining requirements, code/test links, and tests to agent context. |
 | `check(workspace, ...)` | Run the checker in a local or remote workspace and return its exit code and output. |
 | `with_property_testing(context=None, framework=None)` | Add instructions for a focused property-testing task, with an optional library guide. |
-| `with_model_checking(context=None, language=None)` | Add native Alloy modeling/execution instructions and optional Python or Daml correspondence guidance. |
+| `with_model_checking(context=None, language=None, backend="alloy")` | Add native Alloy or Z3 modeling/execution instructions and optional Python or Daml correspondence guidance. |
 
 For projects that need starting requirements and links, see
 [document an existing project](#document-an-existing-project).
@@ -201,17 +201,20 @@ For a dedicated testing task, use
 selecting one also includes that library's guide. The project supplies its own
 test dependencies.
 
-## Model selected properties with Alloy
+## Model selected properties with Alloy or Z3
 
 Use `with_model_checking(context, language="python")` for a dedicated modeling task.
 It includes the portable model-checking skill, deterministic execution guide and
 selected implementation guide. `language="daml"` supplies the Daml modeling and
 ledger-replay guidance.
-Omit `language` for the shared workflow alone.
+Omit `language` for the shared workflow and selected backend. For numeric checks,
+use `with_model_checking(context, language="daml", backend="z3")`; it includes
+the native Z3Py API and SMT execution guide. The default backend is `alloy`.
 
 The agent authors native models and mappings in the application repository.
 Provision the optional Alloy JAR in the execution workspace and run `vt alloy-check`
-through the project's test command when required. No additional agent service is
+through the project's test command when required. For Z3, install
+`versioned-traceability[smt]` in the execution workspace and run `vt smt-check`. No additional agent service is
 needed. The adapter does not infer equivalence between the model and implementation
 or promote bounded results into unrestricted verification claims.
 
